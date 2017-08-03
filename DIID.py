@@ -31,34 +31,105 @@ class Directions(IntEnum):
     
 class DIID():
     
-    roverPos = set()
+    allRoverPos = set()
     
-    #TODO: Add checking of boundaries, whether rover exists, whether rover will collide, 
+    """
+    Description: parses input, for each rover checks if it in collision with another rover, calculates intial rover movement,
+                 writes end positions to file
+    Return: None
+    Inputs: startPos -- list describing the rover's starting position [x(int), y(int), orientation(string)]
+            instructions -- string describing the movement of the rover
+    """
+    def __init__(self, inputFile, outputFile):
+        try:
+            lines = self.parse_input(inputFile)
+            allStartPos = set()
+            output = []
+            i = 1
+            
+            while i < len(lines):
+                startPos = lines[i-1]
+                instructions = lines[i]
+                if (startPos[0], startPos[1]) in allStartPos:
+                    print("Error: Two rovers cannot start in the same position; cannot instantiate.")
+                    raise ValueError
+                else:
+                    allStartPos.add( (startPos[0], startPos[1]) )
+                    endPos = self.move_rover(startPos, instructions)
+                    DIID.allRoverPos.add((endPos[0], endPos[1]))
+                    output.append(" ".join(str(c) for c in endPos))
+
+                i+=2
+            with open(outputFile, 'w') as f:
+                for pos in output:
+                    f.write(pos)
+                    f.write('\n')
+        
+        except ValueError:
+            print("Error: Incorrect number of lines in input; cannot instantiate.")
+            raise
+    
+        
+    """
+    Name: parse_input
+    Description: Parses the file 
+    Return: List containing the starting positions and instructions
+    Inputs: fileName
+    """
+    def parse_input(self, fileName):
+        output = []        
+        with open(fileName) as f:
+            i = 0
+            for line in f:
+                cleaned = line.strip().upper()
+                if cleaned:
+                    if i%2==0:
+                        startPos = cleaned.split(" ")
+                        if len(startPos)!=3:
+                            output.append("Error: Incorrect input -- " + line)
+                        else:
+                            try:
+                                x = int(startPos[0])
+                                y = int(startPos[1])
+                                direction = startPos[2]
+                                output.append([x,y,direction])
+                            except ValueError:
+                                output.append("Error: Incorrect input -- " + line)
+                    else:
+                        output.append(cleaned)
+                i+=1
+                
+            if len(output)%2 != 0:
+                raise ValueError 
+                
+        return output
+                
+             
+            
+    #TODO: Add checking of boundaries, whether rover exists, whether rover will collide, checking terrain in front before moving 
     """
     Name: move_rover
     Description: Calcualtes the movemnt of a single rover
     Return: List containing three elements: X(int), Y(int), Orientation(string)
-    Inputs: startPos -- list containing three elements describing the rover's starting position [x(int), y(int), orientation(string)]
-            instructions -- list containing string elements describing the movement of the rover as described in the instructions
+    Inputs: startPos -- list describing the rover's starting position [x(int), y(int), orientation(string)]
+            instructions -- string describing the movement of the rover
     """
     def move_rover(self, startPos, instructions):
         if not(startPos) or type(startPos)!=list or len(startPos)!=3:
             raise ValueError
         
-        if not(instructions) or type(instructions)!=list or len(instructions)<0:
+        if not(instructions) or type(instructions)!=str:
             raise ValueError
         
         try:
             x = int(startPos[0])
             y = int(startPos[1])
-            orientation = startPos[2].strip().upper()
+            orientation = startPos[2]
             
             orientation = self.convertToNum(orientation)
             
             currPos = [x,y]
             for i in instructions:
-                i = i.strip().upper()
-                
                 if i == "L":
                     orientation -= 1
                 elif i == "R":
@@ -98,6 +169,8 @@ class DIID():
             return "E"
         elif direction == Directions.W:
             return "W"
+        else:
+            raise ValueError
         
     """
     Name: convertToCoord
@@ -134,20 +207,18 @@ class DIID():
             return Directions.W
         else:
             raise ValueError
-            
-        
 
-solution = DIID()
-print(solution.move_rover([0,0,"N"], ["M", "M", "M", "R", "M", "M", "L", "M", "L", "M", "L", "M"]))
-print(solution.move_rover([5,3,"S"], ["R", "M", "M", "R", "M", "L", "L", "M", "M", "M", "M"]))
+solution = DIID("test.txt", "testout.txt")
+#print(solution.move_rover([0,0,"N"], "MMMRMMLMLMLM"))
+#print(solution.move_rover([5,3,"S"], "RMMRMLLMMMM"))
 
-#print(solution.move_rover([], ["M", "M", "M", "R", "M", "M", "L", "M", "L", "M", "L", "M" ]))
-#print(solution.move_rover(123, ["M", "M", "M", "R", "M", "M", "L", "M", "L", "M", "L", "M" ]))
-#print(solution.move_rover(["e",0,"N"], ["M", "M", "M", "R", "M", "M", "L", "M", "L", "M", "L", "M"]))
+#print(solution.move_rover([], "MMMRMMLMLMLM"))
+#print(solution.move_rover(123, "MMMRMMLMLMLM"))
+#print(solution.move_rover(["e",0,"N"], "MMMRMMLMLMLM"))
 
-#print(solution.move_rover([0,0,"N"], []))
+#print(solution.move_rover([0,0,"N"], ""))
 #print(solution.move_rover([0,0,"N"], "fewef"))
-#print(solution.move_rover([0,0,"N"], ["M", "M", "M", "R", "M", "M", "L", "M", "L", "3", "L", "M"]))
+#print(solution.move_rover([0,0,"N"], "MMMRMMLML3LM"))
 
     
     
