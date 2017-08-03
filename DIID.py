@@ -55,6 +55,7 @@ class DIID():
                     raise ValueError
                 else:
                     DIID.allRoverPos.add( (startPos[0], startPos[1]) )
+                    self.updateBoundaries(startPos[0], startPos[1])
 
             
             output = []
@@ -83,6 +84,35 @@ class DIID():
             print("Error: Incorrect number of lines in input; cannot instantiate.")
             raise
     
+    
+    """
+    Name: updateBoundaries
+    Description: updates the boundaries if they are exceeded
+    Return: None
+    Inputs: x (int), y (int)
+    """
+    def updateBoundaries(self, x, y):
+        if not(DIID.leftB) or x < DIID.leftB:
+            DIID.leftB = x
+        if not(DIID.rightB) or x > DIID.rightB:
+            DIID.rightB = x
+        
+        if not(DIID.topB) or y > DIID.topB:
+            DIID.topB = y 
+        if not(DIID.bottomB) or y < DIID.bottomB:
+            DIID.bottomB = y
+          
+            
+    """
+    Name: checkBoundaries
+    Description: check if the seen terrain is within the safe boundaries
+    Return: True if x and y are within the currently seen boundaries and False otherwise
+    Inputs: x (int), y (int)
+    """
+    def checkBoundaries(self, x, y):
+        if x < DIID.leftB or x > DIID.rightB or y > DIID.topB or y < DIID.bottomB: 
+            return False
+        return True
     
     """
     Name: parse_input
@@ -117,8 +147,20 @@ class DIID():
                 raise ValueError 
                 
         return output
-       
-        
+    
+    
+    """
+    Name: checkTerrain
+    Description: Temp function replacing what would actually be in place 
+    Return: True if terrain is clear 
+    Inputs: x (int), y (int)
+    """
+    def checkTerrain(self, x, y):
+        if x < 0 or x > 20 or y < 0 or y > 20:
+            return False
+        return True
+    
+    
     """
     Name: move_all_rovers
     Description: moves serveral rovers as indicated by the input file then writes ending position to a file
@@ -160,7 +202,6 @@ class DIID():
             raise         
             
             
-    #TODO: Add checking of boundaries, checking terrain in front before moving 
     """
     Name: move_rover
     Description: Calcualtes the movemnt of a single rover
@@ -195,6 +236,11 @@ class DIID():
                     currPos[1] += change[1]
                     if (currPos[0], currPos[1]) in DIID.allRoverPos:
                         return False, startPos
+                    if not(self.checkBoundaries(currPos[0], currPos[1])):
+                        if (self.checkTerrain(currPos[0], currPos[1])):
+                            self.updateBoundaries(currPos[0], currPos[1])
+                        else:
+                            return False, startPos
                 else:
                     raise ValueError
                 
