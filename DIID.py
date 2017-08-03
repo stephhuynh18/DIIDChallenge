@@ -32,34 +32,48 @@ class Directions(IntEnum):
 class DIID():
     
     allRoverPos = set()
+    leftB = None
+    rightB = None
+    topB = None
+    bottomB = None
+    
     
     """
     Description: parses input, for each rover checks if it in collision with another rover, calculates intial rover movement,
                  writes end positions to file
     Return: None
-    Inputs: startPos -- list describing the rover's starting position [x(int), y(int), orientation(string)]
-            instructions -- string describing the movement of the rover
+    Inputs: inputFile (string), outputfile(string)
     """
     def __init__(self, inputFile, outputFile):
         try:
             lines = self.parse_input(inputFile)
-            allStartPos = set()
-            output = []
-            i = 1
             
-            while i < len(lines):
-                startPos = lines[i-1]
-                instructions = lines[i]
-                if (startPos[0], startPos[1]) in allStartPos:
+            for i in range(0, len(lines), 2):
+                startPos = lines[i]
+                if (startPos[0], startPos[1]) in DIID.allRoverPos:
                     print("Error: Two rovers cannot start in the same position; cannot instantiate.")
                     raise ValueError
                 else:
-                    allStartPos.add( (startPos[0], startPos[1]) )
-                    endPos = self.move_rover(startPos, instructions)
+                    DIID.allRoverPos.add( (startPos[0], startPos[1]) )
+
+            
+            output = []
+            i = 1
+            while i < len(lines):
+                startPos = lines[i-1]
+                instructions = lines[i]
+                DIID.allRoverPos.remove( (startPos[0], startPos[1]) )
+                
+                success, endPos = self.move_rover(startPos, instructions)
+                if success:
                     DIID.allRoverPos.add((endPos[0], endPos[1]))
                     output.append(" ".join(str(c) for c in endPos))
+                else:
+                    DIID.allRoverPos.add((startPos[0], startPos[1]))
+                    output.append("Error: Unable to move rover at " + " ".join(str(c) for c in startPos) )
 
                 i+=2
+                
             with open(outputFile, 'w') as f:
                 for pos in output:
                     f.write(pos)
@@ -69,7 +83,7 @@ class DIID():
             print("Error: Incorrect number of lines in input; cannot instantiate.")
             raise
     
-        
+    
     """
     Name: parse_input
     Description: Parses the file 
@@ -103,14 +117,55 @@ class DIID():
                 raise ValueError 
                 
         return output
-                
-             
+       
+        
+    """
+    Name: move_all_rovers
+    Description: moves serveral rovers as indicated by the input file then writes ending position to a file
+    Return: None
+    Inputs: inputFile (string), outputfile(string)
+    """         
+    def move_all_rovers(self, inputFile, ouputFile):
+        try:
+            lines = self.parse_input(inputFile)
+            output = []
+            i = 1
             
-    #TODO: Add checking of boundaries, whether rover exists, whether rover will collide, checking terrain in front before moving 
+            while i < len(lines):
+                startPos = lines[i-1]
+                instructions = lines[i]
+                if (startPos[0], startPos[1]) not in DIID.allRoverPos:
+                    output.append("Error: Rover does not exist.")
+                else:
+                    DIID.allRoverPos.remove((startPos[0], startPos[1]))
+                    success, endPos = self.move_rover(startPos, instructions)
+                    
+                    if success:
+                        DIID.allRoverPos.add((endPos[0], endPos[1]))
+                        output.append(" ".join(str(c) for c in endPos))
+                    else:
+                        DIID.allRoverPos.add((startPos[0], startPos[1]))
+                        output.append("Error: Unable to move rover at " + " ".join(str(c) for c in startPos) )
+                        DIID.allRoverPos.add((endPos[0], endPos[1]))
+                        output.append(" ".join(str(c) for c in endPos))
+                i+=2
+                
+            with open(ouputFile, 'w') as f:
+                for pos in output:
+                    f.write(pos)
+                    f.write('\n')
+        
+        except ValueError:
+            print("Error: Incorrect number of lines in input. Cannot process movements.")
+            raise         
+            
+            
+    #TODO: Add checking of boundaries, checking terrain in front before moving 
     """
     Name: move_rover
     Description: Calcualtes the movemnt of a single rover
-    Return: List containing three elements: X(int), Y(int), Orientation(string)
+    Return: Bool indicating if the move was successful, 
+            List containing three elements: X(int), Y(int), Orientation(string)
     Inputs: startPos -- list describing the rover's starting position [x(int), y(int), orientation(string)]
             instructions -- string describing the movement of the rover
     """
@@ -138,6 +193,8 @@ class DIID():
                     change = self.convertToCoord(orientation)
                     currPos[0] += change[0]
                     currPos[1] += change[1]
+                    if (currPos[0], currPos[1]) in DIID.allRoverPos:
+                        return False, startPos
                 else:
                     raise ValueError
                 
@@ -149,10 +206,11 @@ class DIID():
             
             orientation = self.convertToLetter(orientation)
             currPos.append(orientation)
-            return currPos
+            return True, currPos
         
         except ValueError:
             raise
+    
     
     """
     Name: converToLetter
@@ -172,6 +230,7 @@ class DIID():
         else:
             raise ValueError
         
+        
     """
     Name: convertToCoord
     Description: convert num to associated coordinate describing change in direction
@@ -189,6 +248,7 @@ class DIID():
             return [0,-1]
         else:
             raise ValueError
+    
     
     """
     Name: convertToNum
