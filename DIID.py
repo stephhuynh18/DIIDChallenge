@@ -323,6 +323,17 @@ class DIID():
         else:
             raise ValueError
 
+def main():
+    startFileName = "test5.txt"
+    outputFileName = "test5out.txt"
+    
+    moveFileName = "test6.txt"
+    outputMoveFileName = "test6out.txt"
+    
+    solution = DIID(startFileName, outputFileName)
+    solution.move_all_rovers(moveFileName, outputMoveFileName)
+    
+main()
 
 ################################################################
 
@@ -345,14 +356,14 @@ class DIID():
 ################################################################
 
 #correct move input with one outside of boundaries
-test5 = DIID("test5.txt", "test5out.txt")
-test5.move_all_rovers("test6.txt", "test6out.txt")
+#test5 = DIID("test5.txt", "test5out.txt")
+#test5.move_all_rovers("test6.txt", "test6out.txt")
 
 #incorrect move input
 #test5.move_all_rovers("test7.txt", "test8out.txt")
 
 #rover does not exist
-test5.move_all_rovers("test8.txt", "test9out.txt")
+#test5.move_all_rovers("test8.txt", "test9out.txt")
 
 
 ################################################################
