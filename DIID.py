@@ -184,6 +184,7 @@ class DIID():
                     output.append("Error: Rover does not exist.")
                 else:
                     self.allRoverPos.remove((startPos[0], startPos[1]))
+                    
                     success, endPos = self.move_rover(startPos, instructions) 
                     self.allRoverPos.add((endPos[0], endPos[1]))
                     if success:
@@ -198,7 +199,6 @@ class DIID():
                     f.write('\n')
         
         except ValueError:
-            print("Error: Incorrect number of lines in input. Cannot process movements.")
             raise         
             
             
@@ -231,6 +231,7 @@ class DIID():
                 lastX = currPos[0]
                 lastY = currPos[1]
                 lastD = orientation
+                
                 if i == "L":
                     orientation -= 1
                 elif i == "R":
@@ -239,11 +240,15 @@ class DIID():
                     change = self.convertToCoord(orientation)
                     currPos[0] += change[0]
                     currPos[1] += change[1]
+                    #if there is a collision return current position
                     if (currPos[0], currPos[1]) in self.allRoverPos:
-                        return False, startPos
+                        return False, [lastX, lastY, self.convertToLetter(lastD)]
+                    #if you are outside of the currently seen boundaries check the terrain in front to ensure there is no failures
                     if not(self.checkBoundaries(currPos[0], currPos[1])):
+                        #if the terrain is clear update the boundaries
                         if (self.checkTerrain(currPos[0], currPos[1])):
                             self.updateBoundaries(currPos[0], currPos[1])
+                        #terrain is not clear so return the current position of the rover
                         else:
                             return False, [lastX, lastY, self.convertToLetter(lastD)]
                 else:
@@ -251,7 +256,6 @@ class DIID():
                 
                 if orientation < 0 :
                     orientation = 3
-                
                 if orientation > 3 : 
                     orientation = orientation%4
             
