@@ -1,0 +1,2 @@
+Error: Unable to move rover at 0 6 W
+5 6 N

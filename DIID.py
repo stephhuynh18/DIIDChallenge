@@ -29,14 +29,7 @@ class Directions(IntEnum):
     W = 3
     
     
-class DIID():
-    
-    allRoverPos = set()
-    leftB = None
-    rightB = None
-    topB = None
-    bottomB = None
-    
+class DIID(): 
     
     """
     Description: parses input, for each rover checks if it in collision with another rover, calculates intial rover movement,
@@ -45,16 +38,23 @@ class DIID():
     Inputs: inputFile (string), outputfile(string)
     """
     def __init__(self, inputFile, outputFile):
+        self.allRoverPos = set()
+        self.leftB = None
+        self.rightB = None
+        self.topB = None
+        self.bottomB = None
+        
         try:
             lines = self.parse_input(inputFile)
             
             for i in range(0, len(lines), 2):
                 startPos = lines[i]
-                if (startPos[0], startPos[1]) in DIID.allRoverPos:
+                #check if two rovers start at same position
+                if (startPos[0], startPos[1]) in self.allRoverPos:
                     print("Error: Two rovers cannot start in the same position; cannot instantiate.")
                     raise ValueError
                 else:
-                    DIID.allRoverPos.add( (startPos[0], startPos[1]) )
+                    self.allRoverPos.add( (startPos[0], startPos[1]) )
                     self.updateBoundaries(startPos[0], startPos[1])
 
             
@@ -63,15 +63,16 @@ class DIID():
             while i < len(lines):
                 startPos = lines[i-1]
                 instructions = lines[i]
-                DIID.allRoverPos.remove( (startPos[0], startPos[1]) )
+                self.allRoverPos.remove( (startPos[0], startPos[1]) )
                 
                 success, endPos = self.move_rover(startPos, instructions)
+                self.allRoverPos.add((endPos[0], endPos[1]))
+                #can move rover
                 if success:
-                    DIID.allRoverPos.add((endPos[0], endPos[1]))
                     output.append(" ".join(str(c) for c in endPos))
+                #can't move rover or rover will collide 
                 else:
-                    DIID.allRoverPos.add((startPos[0], startPos[1]))
-                    output.append("Error: Unable to move rover at " + " ".join(str(c) for c in startPos) )
+                    output.append("Error: Unable to move rover at " + " ".join(str(c) for c in endPos) )
 
                 i+=2
                 
@@ -81,7 +82,6 @@ class DIID():
                     f.write('\n')
         
         except ValueError:
-            print("Error: Incorrect number of lines in input; cannot instantiate.")
             raise
     
     
@@ -92,15 +92,15 @@ class DIID():
     Inputs: x (int), y (int)
     """
     def updateBoundaries(self, x, y):
-        if not(DIID.leftB) or x < DIID.leftB:
-            DIID.leftB = x
-        if not(DIID.rightB) or x > DIID.rightB:
-            DIID.rightB = x
+        if not(self.leftB) or x < self.leftB:
+            self.leftB = x
+        if not(self.rightB) or x > self.rightB:
+            self.rightB = x
         
-        if not(DIID.topB) or y > DIID.topB:
-            DIID.topB = y 
-        if not(DIID.bottomB) or y < DIID.bottomB:
-            DIID.bottomB = y
+        if not(self.topB) or y > self.topB:
+            self.topB = y 
+        if not(self.bottomB) or y < self.bottomB:
+            self.bottomB = y
           
             
     """
@@ -110,9 +110,10 @@ class DIID():
     Inputs: x (int), y (int)
     """
     def checkBoundaries(self, x, y):
-        if x < DIID.leftB or x > DIID.rightB or y > DIID.topB or y < DIID.bottomB: 
+        if x < self.leftB or x > self.rightB or y > self.topB or y < self.bottomB: 
             return False
         return True
+    
     
     """
     Name: parse_input
@@ -127,6 +128,7 @@ class DIID():
             for line in f:
                 cleaned = line.strip().upper()
                 if cleaned:
+                    #parse odd lines as these are starting positions
                     if i%2==0:
                         startPos = cleaned.split(" ")
                         if len(startPos)!=3:
@@ -138,7 +140,8 @@ class DIID():
                                 direction = startPos[2]
                                 output.append([x,y,direction])
                             except ValueError:
-                                output.append("Error: Incorrect input -- " + line)
+                                raise
+                    #don't parse instructions
                     else:
                         output.append(cleaned)
                 i+=1
@@ -176,22 +179,19 @@ class DIID():
             while i < len(lines):
                 startPos = lines[i-1]
                 instructions = lines[i]
-                if (startPos[0], startPos[1]) not in DIID.allRoverPos:
+                #make sure rover exists
+                if (startPos[0], startPos[1]) not in self.allRoverPos:
                     output.append("Error: Rover does not exist.")
                 else:
-                    DIID.allRoverPos.remove((startPos[0], startPos[1]))
-                    success, endPos = self.move_rover(startPos, instructions)
-                    
+                    self.allRoverPos.remove((startPos[0], startPos[1]))
+                    success, endPos = self.move_rover(startPos, instructions) 
+                    self.allRoverPos.add((endPos[0], endPos[1]))
                     if success:
-                        DIID.allRoverPos.add((endPos[0], endPos[1]))
                         output.append(" ".join(str(c) for c in endPos))
                     else:
-                        DIID.allRoverPos.add((startPos[0], startPos[1]))
-                        output.append("Error: Unable to move rover at " + " ".join(str(c) for c in startPos) )
-                        DIID.allRoverPos.add((endPos[0], endPos[1]))
-                        output.append(" ".join(str(c) for c in endPos))
+                        output.append("Error: Unable to move rover at " + " ".join(str(c) for c in endPos) )
                 i+=2
-                
+            
             with open(ouputFile, 'w') as f:
                 for pos in output:
                     f.write(pos)
@@ -226,6 +226,11 @@ class DIID():
             
             currPos = [x,y]
             for i in instructions:
+                #keep last just in case boundary is reached or collision happens
+                #so stop before crashing and do not continue but don't go back to start
+                lastX = currPos[0]
+                lastY = currPos[1]
+                lastD = orientation
                 if i == "L":
                     orientation -= 1
                 elif i == "R":
@@ -234,13 +239,13 @@ class DIID():
                     change = self.convertToCoord(orientation)
                     currPos[0] += change[0]
                     currPos[1] += change[1]
-                    if (currPos[0], currPos[1]) in DIID.allRoverPos:
+                    if (currPos[0], currPos[1]) in self.allRoverPos:
                         return False, startPos
                     if not(self.checkBoundaries(currPos[0], currPos[1])):
                         if (self.checkTerrain(currPos[0], currPos[1])):
                             self.updateBoundaries(currPos[0], currPos[1])
                         else:
-                            return False, startPos
+                            return False, [lastX, lastY, self.convertToLetter(lastD)]
                 else:
                     raise ValueError
                 
@@ -285,13 +290,13 @@ class DIID():
     """   
     def convertToCoord(self, direction):
         if direction == Directions.N:
-            return [1,0]
-        elif direction == Directions.S:
-            return [-1,0]
-        elif direction == Directions.E:
             return [0,1]
-        elif direction == Directions.W:
+        elif direction == Directions.S:
             return [0,-1]
+        elif direction == Directions.E:
+            return [1,0]
+        elif direction == Directions.W:
+            return [-1,0]
         else:
             raise ValueError
     
@@ -314,14 +319,49 @@ class DIID():
         else:
             raise ValueError
 
-solution = DIID("test.txt", "testout.txt")
+
+################################################################
+
+#correct input
+#test1 = DIID("test.txt", "testout.txt")
+ 
+#collission
+#test2 = DIID("test2.txt", "test2out.txt")
+
+#incorrect num lines
+#test3 = DIID("test3.txt", "test3out.txt")
+
+#incorrect input
+#test4 = DIID("test4.txt", "test4out.txt")
+
+#incorrect start input
+#test7 = DIID("test7.txt", "test7out.txt")
+
+
+################################################################
+
+#correct move input with one outside of boundaries
+test5 = DIID("test5.txt", "test5out.txt")
+test5.move_all_rovers("test6.txt", "test6out.txt")
+
+#incorrect move input
+#test5.move_all_rovers("test7.txt", "test8out.txt")
+
+#rover does not exist
+test5.move_all_rovers("test8.txt", "test9out.txt")
+
+
+################################################################
+#correctInput
 #print(solution.move_rover([0,0,"N"], "MMMRMMLMLMLM"))
 #print(solution.move_rover([5,3,"S"], "RMMRMLLMMMM"))
 
+#incorrect start pos
 #print(solution.move_rover([], "MMMRMMLMLMLM"))
 #print(solution.move_rover(123, "MMMRMMLMLMLM"))
 #print(solution.move_rover(["e",0,"N"], "MMMRMMLMLMLM"))
 
+#incorrect directions
 #print(solution.move_rover([0,0,"N"], ""))
 #print(solution.move_rover([0,0,"N"], "fewef"))
 #print(solution.move_rover([0,0,"N"], "MMMRMMLML3LM"))
